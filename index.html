@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>予約admin登録補助ツール</title>
+<style>
+:root{
+  --ink:#172033;
+  --muted:#657085;
+  --line:#D9E1EC;
+  --bg:#F5F7FA;
+  --panel:#FFFFFF;
+  --navy:#0B1929;
+  --cyan:#00A7C7;
+  --green:#078764;
+  --amber:#B76500;
+  --red:#C93636;
+  --blue:#2563EB;
+  --soft-blue:#EAF4FF;
+  --soft-green:#EAF8F3;
+  --soft-amber:#FFF4DF;
+  --soft-red:#FFEDED;
+  --shadow:0 2px 12px rgba(15,23,42,.08);
+  --radius:8px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  line-height:1.5;
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:280px minmax(0,1fr);
+}
+.side{
+  background:var(--navy);
+  color:#fff;
+  padding:22px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+.brand-label{
+  color:var(--cyan);
+  font-size:11px;
+  letter-spacing:1.6px;
+  font-weight:800;
+}
+.brand-title{
+  font-size:24px;
+  font-weight:800;
+  margin-top:4px;
+}
+.brand-sub{
+  color:#A8B5C7;
+  font-size:13px;
+  margin-top:4px;
+}
+.step-list{display:grid;gap:10px;margin-top:8px}
+.step{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px;
+  border-radius:var(--radius);
+  background:rgba(255,255,255,.08);
+}
+.step-num{
+  flex:0 0 26px;
+  height:26px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:rgba(0,167,199,.22);
+  color:#BFF4FF;
+  font-weight:800;
+  font-size:12px;
+}
+.step-title{font-weight:800;font-size:13px}
+.step-text{font-size:12px;color:#C5D0DF;margin-top:2px}
+.safety{
+  margin-top:auto;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:var(--radius);
+  padding:12px;
+  background:rgba(255,255,255,.06);
+}
+.safety strong{display:block;font-size:13px;margin-bottom:4px}
+.safety span{display:block;color:#C5D0DF;font-size:12px}
+.main{min-width:0;padding:20px}
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+  margin-bottom:16px;
+}
+.page-title{font-size:22px;font-weight:800}
+.page-note{color:var(--muted);font-size:13px;margin-top:2px}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border-radius:999px;
+  padding:7px 11px;
+  font-weight:800;
+  font-size:12px;
+  background:var(--soft-green);
+  color:var(--green);
+  white-space:nowrap;
+}
+.grid{
+  display:grid;
+  grid-template-columns:minmax(320px,440px) minmax(0,1fr);
+  gap:16px;
+  align-items:start;
+}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.panel-head{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+}
+.panel-title{font-weight:800}
+.panel-body{padding:16px}
+.field{margin-bottom:14px}
+.label{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:800;
+  margin-bottom:6px;
+}
+.hint{font-weight:600;color:#8994A8}
+textarea,input,select{
+  width:100%;
+  border:1.5px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  padding:11px 12px;
+  color:var(--ink);
+}
+textarea{min-height:190px;resize:vertical}
+textarea:focus,input:focus,select:focus{
+  outline:none;
+  border-color:var(--cyan);
+  box-shadow:0 0 0 3px rgba(0,167,199,.12);
+}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.btn{
+  border:none;
+  border-radius:var(--radius);
+  padding:12px 14px;
+  font-weight:800;
+  transition:transform .08s,opacity .08s,background .1s;
+}
+.btn:active{transform:scale(.99);opacity:.86}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-dark{background:var(--navy);color:#fff}
+.btn-ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+.btn-green{background:var(--green);color:#fff}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.tabs{
+  display:flex;
+  border-bottom:1px solid var(--line);
+  background:#F9FBFD;
+}
+.tab{
+  padding:12px 16px;
+  border:0;
+  border-right:1px solid var(--line);
+  background:transparent;
+  color:var(--muted);
+  font-weight:800;
+}
+.tab.active{background:#fff;color:var(--navy)}
+.view{display:none}
+.view.active{display:block}
+.status-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-bottom:14px;
+}
+.status{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:12px;
+  background:#fff;
+}
+.status-num{font-size:22px;font-weight:900}
+.status-label{color:var(--muted);font-size:12px;font-weight:700}
+.warn-list{display:grid;gap:8px;margin-bottom:14px}
+.warn{
+  border-radius:var(--radius);
+  padding:10px 12px;
+  font-size:13px;
+  font-weight:700;
+  border:1px solid transparent;
+}
+.warn.red{background:var(--soft-red);border-color:#FFD0D0;color:var(--red)}
+.warn.amber{background:var(--soft-amber);border-color:#FFE0A9;color:var(--amber)}
+.warn.green{background:var(--soft-green);border-color:#BDEADA;color:var(--green)}
+.admin-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.copy-card{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  overflow:hidden;
+}
+.copy-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  padding:9px 10px;
+  background:#F7FAFD;
+  border-bottom:1px solid var(--line);
+}
+.copy-label{font-size:12px;color:var(--muted);font-weight:800}
+.copy-btn{
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--blue);
+  border-radius:6px;
+  padding:5px 8px;
+  font-size:12px;
+  font-weight:800;
+}
+.copy-value{
+  padding:11px 10px;
+  min-height:44px;
+  font-weight:800;
+  word-break:break-word;
+}
+.copy-value.muted{color:#9AA5B7;font-weight:700}
+.mapping-table,.log-table,.csv-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+th,td{
+  border-bottom:1px solid var(--line);
+  padding:10px 8px;
+  text-align:left;
+  vertical-align:top;
+}
+th{
+  color:var(--muted);
+  background:#F7FAFD;
+  font-size:12px;
+}
+.mini-input{padding:8px;border-radius:7px}
+.right{text-align:right}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:4px 8px;
+  background:var(--soft-blue);
+  color:var(--blue);
+  font-size:12px;
+  font-weight:800;
+}
+.checklist{display:grid;gap:8px}
+.check{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:10px;
+  background:#fff;
+}
+.check input{width:18px;height:18px;margin-top:2px}
+.check-title{font-weight:800;font-size:13px}
+.check-text{color:var(--muted);font-size:12px;margin-top:1px}
+.file-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:14px;
+}
+.file-box{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  padding:12px;
+}
+.file-title{font-weight:900;font-size:13px;margin-bottom:6px}
+.file-meta{color:var(--muted);font-size:12px;margin-top:7px}
+.missing-wrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+}
+.csv-search{
+  display:grid;
+  grid-template-columns:minmax(220px,1fr) auto;
+  gap:8px;
+  margin-bottom:12px;
+}
+.search-result{
+  display:grid;
+  gap:8px;
+  margin-bottom:12px;
+}
+.source-hit{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  padding:10px 12px;
+}
+.source-hit strong{display:block;font-size:13px;margin-bottom:3px}
+.source-hit span{display:block;color:var(--muted);font-size:12px}
+.csv-table th,.csv-table td{white-space:nowrap}
+.csv-table tr:hover td{background:#F8FBFF}
+.date-divider td{
+  background:var(--navy);
+  color:#fff;
+  font-weight:900;
+  border-bottom:0;
+  padding:11px 10px;
+}
+.date-divider span{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.date-divider span::before{
+  content:'';
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:var(--cyan);
+}
+.work-flow{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  margin-bottom:14px;
+}
+.flow-card{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  padding:10px;
+}
+.flow-kicker{color:var(--cyan);font-weight:900;font-size:11px}
+.flow-title{font-weight:900;font-size:13px;margin-top:2px}
+.flow-text{color:var(--muted);font-size:12px;margin-top:2px}
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:20px;
+  transform:translateX(-50%);
+  background:var(--navy);
+  color:#fff;
+  padding:10px 16px;
+  border-radius:999px;
+  font-weight:800;
+  font-size:13px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s;
+}
+.toast.show{opacity:1}
+@media (max-width:980px){
+  .app{grid-template-columns:1fr}
+  .side{position:static}
+  .grid{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  .main{padding:12px}
+  .topbar{align-items:flex-start;flex-direction:column}
+  .status-grid,.admin-grid,.row,.row3,.work-flow,.file-grid,.csv-search{grid-template-columns:1fr}
+  .tab{flex:1;padding:11px 8px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div>
+      <div class="brand-label">G-LINES / RENTAL OPS</div>
+      <div class="brand-title">予約admin登録補助</div>
+      <div class="brand-sub">社外予約をapp基準の車種へ揃えて、admin入力前に確認します。</div>
+    </div>
+    <div class="step-list">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div><div class="step-title">Slack予約を確認</div><div class="step-text">予約通知を貼り付け、予約元と日時を抽出します。</div></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div><div class="step-title">app割当車両を確認</div><div class="step-text">app側で振り分けられた実車両を控えます。</div></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div><div class="step-title">adminへ人が登録</div><div class="step-text">該当車両に必要項目をコピーして入力します。</div></div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div><div class="step-title">Slackに完了スタンプ</div><div class="step-text">調整済スタンプを押して作業完了にします。</div></div>
+      </div>
+    </div>
+    <div class="safety">
+      <strong>安全設計</strong>
+      <span>このツールはadminへ自動入力・自動送信を行いません。在庫や料金に影響する最終操作は必ず人が行います。</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">社外予約の登録前チェック</div>
+        <div class="page-note">初版プロトタイプ。対応表はこのブラウザに保存されます。</div>
+      </div>
+      <span class="pill">admin非接続モード</span>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">予約情報</div>
+          <button class="btn btn-ghost" id="sampleBtn" type="button">サンプル入力</button>
+        </div>
+        <div class="panel-body">
+          <div class="field">
+            <label class="label" for="sourceSite">予約サイト</label>
+            <select id="sourceSite">
+              <option value="じゃらん">じゃらん</option>
+              <option value="楽天">楽天</option>
+              <option value="楽天トラベル">楽天トラベル</option>
+              <option value="エアトリ">エアトリ</option>
+              <option value="オフィシャル">オフィシャル</option>
+              <option value="HP">HP</option>
+              <option value="Google">Google</option>
+              <option value="GoGoout">GoGoout</option>
+              <option value="SmartPlus">SmartPlus</option>
+              <option value="自社外部">その他社外</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label" for="rawText">予約通知の貼り付け <span class="hint">氏名や電話番号は伏せてもOK</span></label>
+            <textarea id="rawText" placeholder="例:
+予約番号: JLN-123456
+お客様名: 山田 太郎
+利用日時: 2026/05/21 10:00
+返却日時: 2026/05/23 18:00
+車両クラス: 軽自動車
+料金: 18000
+電話番号: 090-0000-0000"></textarea>
+          </div>
+          <div class="field">
+            <label class="label">app確認後に入れる項目 <span class="hint">adminの自動操作はしません</span></label>
+            <div class="row">
+              <input id="appAssignedVehicle" placeholder="app割当車両 例: N-BOX 白 12-34">
+              <input id="adminTargetVehicle" placeholder="admin登録対象車両 例: N-BOX 白 12-34">
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">admin入力で面倒な顧客項目</label>
+            <div class="row3">
+              <input id="lastName" placeholder="姓">
+              <input id="firstName" placeholder="名">
+              <input id="prefecture" placeholder="都道府県">
+            </div>
+          </div>
+          <div class="field">
+            <input id="birthDate" placeholder="生年月日 例: 1990/01/01">
+          </div>
+          <div class="row">
+            <button class="btn btn-primary" id="parseBtn" type="button">解析する</button>
+            <button class="btn btn-ghost" id="clearBtn" type="button">クリア</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="tabs">
+          <button class="tab active" data-view="result">登録内容</button>
+          <button class="tab" data-view="csv">CSV照合</button>
+          <button class="tab" data-view="map">車種対応表</button>
+          <button class="tab" data-view="log">作業ログ</button>
+        </div>
+        <div class="panel-body">
+          <div id="view-result" class="view active">
+            <div class="work-flow">
+              <div class="flow-card"><div class="flow-kicker">STEP 1</div><div class="flow-title">Slack確認</div><div class="flow-text">予約通知の内容を取得</div></div>
+              <div class="flow-card"><div class="flow-kicker">STEP 2</div><div class="flow-title">app確認</div><div class="flow-text">割当車両を転記</div></div>
+              <div class="flow-card"><div class="flow-kicker">STEP 3</div><div class="flow-title">admin登録</div><div class="flow-text">予約元・日時・顧客・料金</div></div>
+              <div class="flow-card"><div class="flow-kicker">STEP 4</div><div class="flow-title">Slack完了</div><div class="flow-text">調整済スタンプ</div></div>
+            </div>
+            <div class="status-grid">
+              <div class="status"><div class="status-num" id="scoreRequired">0</div><div class="status-label">必須項目</div></div>
+              <div class="status"><div class="status-num" id="scoreWarning">0</div><div class="status-label">注意</div></div>
+              <div class="status"><div class="status-num" id="scoreMapped">0</div><div class="status-label">車種照合</div></div>
+              <div class="status"><div class="status-num" id="scoreReady">未</div><div class="status-label">登録準備</div></div>
+            </div>
+            <div class="warn-list" id="warnings"></div>
+            <div class="admin-grid" id="adminFields"></div>
+            <div style="margin-top:14px" class="panel">
+              <div class="panel-head">
+                <div class="panel-title">登録前チェック</div>
+                <button class="btn btn-green" id="saveLogBtn" type="button">登録作業ログに保存</button>
+              </div>
+              <div class="panel-body">
+                <div class="checklist">
+                  <label class="check"><input type="checkbox" id="chkVehicle"><span><span class="check-title">車種名がapp/admin基準と一致</span><span class="check-text">社外サイトの表記ではなく、adminへ入れる名称を確認。</span></span></label>
+                  <label class="check"><input type="checkbox" id="chkSlack"><span><span class="check-title">Slackの予約通知を確認</span><span class="check-text">予約元、予約番号、原文の内容を確認。</span></span></label>
+                  <label class="check"><input type="checkbox" id="chkApp"><span><span class="check-title">appの割当車両を確認</span><span class="check-text">appに読み込まれた予約がどの実車両に振られたか確認。</span></span></label>
+                  <label class="check"><input type="checkbox" id="chkDate"><span><span class="check-title">貸出・返却日時を確認</span><span class="check-text">日跨ぎ、午前午後、返却店舗の違いを確認。</span></span></label>
+                  <label class="check"><input type="checkbox" id="chkPrice"><span><span class="check-title">料金・免責・オプションを確認</span><span class="check-text">料金項目はadmin登録前に必ず原文と照合。</span></span></label>
+                  <label class="check"><input type="checkbox" id="chkAdmin"><span><span class="check-title">adminの該当車両へ登録</span><span class="check-text">予約元、日時、姓名、都道府県、生年月日、料金を入力。</span></span></label>
+                  <label class="check"><input type="checkbox" id="chkStamp"><span><span class="check-title">Slackに調整済スタンプ</span><span class="check-text">登録完了後にSlackへ完了の印を残す。</span></span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="view-csv" class="view">
+            <div class="file-grid">
+              <div class="file-box">
+                <div class="file-title">1つ目: app側CSV</div>
+                <input id="appCsvFile" type="file" accept=".csv,text/csv">
+                <div class="file-meta" id="appCsvMeta">未選択</div>
+              </div>
+              <div class="file-box">
+                <div class="file-title">2つ目: admin側CSV</div>
+                <input id="adminCsvFile" type="file" accept=".csv,text/csv">
+                <div class="file-meta" id="adminCsvMeta">未選択</div>
+              </div>
+            </div>
+            <div class="toolbar" style="margin-bottom:12px">
+              <button class="btn btn-primary" id="compareCsvBtn" type="button">appのみ予約を照合</button>
+              <button class="btn btn-ghost" id="exportMissingBtn" type="button">appのみCSV</button>
+            </div>
+            <div class="warn green" style="margin-bottom:12px">CSVを更新しても作業ログは保持されます。ログ削除ボタンを押した場合のみ削除されます。</div>
+            <div class="csv-search">
+              <input id="csvSearchInput" placeholder="予約番号・名前でCSV/作業ログを検索">
+              <button class="btn btn-dark" id="csvSearchBtn" type="button">検索</button>
+            </div>
+            <div class="search-result" id="csvSearchResult"></div>
+            <div class="status-grid">
+              <div class="status"><div class="status-num" id="csvAppCount">0</div><div class="status-label">app有効</div></div>
+              <div class="status"><div class="status-num" id="csvAdminCount">0</div><div class="status-label">admin件数</div></div>
+              <div class="status"><div class="status-num" id="csvMatchedCount">0</div><div class="status-label">登録済</div></div>
+              <div class="status"><div class="status-num" id="csvMissingCount">0</div><div class="status-label">appのみ</div></div>
+            </div>
+            <div class="warn-list" id="csvWarnings"></div>
+            <div class="missing-wrap">
+              <table class="csv-table">
+                <thead><tr><th>操作</th><th>判定</th><th>予約番号</th><th>予約元</th><th>予約者</th><th>貸出</th><th>返却</th><th>車種</th><th>配車車両</th><th>料金</th></tr></thead>
+                <tbody id="missingBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="view-map" class="view">
+            <div class="toolbar" style="margin-bottom:12px">
+              <button class="btn btn-dark" id="addMapBtn" type="button">対応を追加</button>
+              <button class="btn btn-ghost" id="resetMapBtn" type="button">初期対応に戻す</button>
+            </div>
+            <table class="mapping-table">
+              <thead><tr><th>社外サイト表記</th><th>app/admin登録名</th><th>車両クラス</th><th class="right">操作</th></tr></thead>
+              <tbody id="mappingBody"></tbody>
+            </table>
+          </div>
+
+          <div id="view-log" class="view">
+            <div class="toolbar" style="margin-bottom:12px">
+              <button class="btn btn-ghost" id="exportLogBtn" type="button">CSV出力</button>
+              <button class="btn btn-ghost" id="clearLogBtn" type="button">ログ削除</button>
+            </div>
+            <table class="log-table">
+              <thead><tr><th>日時</th><th>予約番号</th><th>顧客</th><th>登録車種</th><th>app割当</th><th>admin対象</th><th>状態</th></tr></thead>
+              <tbody id="logBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const defaultMappings = [
+  { external:'軽自動車', admin:'軽自動車クラス', className:'K' },
+  { external:'コンパクト', admin:'コンパクトクラス', className:'S' },
+  { external:'普通車', admin:'スタンダードクラス', className:'M' },
+  { external:'ミニバン', admin:'ミニバンクラス', className:'W' },
+  { external:'ワゴン', admin:'ワゴンクラス', className:'W' },
+  { external:'SUV', admin:'SUVクラス', className:'SUV' },
+  { external:'ハイブリッド', admin:'ハイブリッドクラス', className:'HV' }
+];
+
+const state = {
+  parsed: {},
+  warnings: [],
+  appRows: [],
+  adminRows: [],
+  missingRows: []
+};
+
+const els = {
+  rawText: document.getElementById('rawText'),
+  sourceSite: document.getElementById('sourceSite'),
+  appAssignedVehicle: document.getElementById('appAssignedVehicle'),
+  adminTargetVehicle: document.getElementById('adminTargetVehicle'),
+  lastName: document.getElementById('lastName'),
+  firstName: document.getElementById('firstName'),
+  prefecture: document.getElementById('prefecture'),
+  birthDate: document.getElementById('birthDate'),
+  warnings: document.getElementById('warnings'),
+  adminFields: document.getElementById('adminFields'),
+  mappingBody: document.getElementById('mappingBody'),
+  logBody: document.getElementById('logBody'),
+  appCsvFile: document.getElementById('appCsvFile'),
+  adminCsvFile: document.getElementById('adminCsvFile'),
+  appCsvMeta: document.getElementById('appCsvMeta'),
+  adminCsvMeta: document.getElementById('adminCsvMeta'),
+  csvWarnings: document.getElementById('csvWarnings'),
+  missingBody: document.getElementById('missingBody'),
+  csvSearchInput: document.getElementById('csvSearchInput'),
+  csvSearchResult: document.getElementById('csvSearchResult'),
+  toast: document.getElementById('toast')
+};
+
+function getMappings(){
+  const saved = localStorage.getItem('reservation_helper_mappings');
+  if(!saved) return [...defaultMappings];
+  try { return JSON.parse(saved); } catch { return [...defaultMappings]; }
+}
+
+function setMappings(rows){
+  localStorage.setItem('reservation_helper_mappings', JSON.stringify(rows));
+}
+
+function getLogs(){
+  const saved = localStorage.getItem('reservation_helper_logs');
+  if(!saved) return [];
+  try { return JSON.parse(saved); } catch { return []; }
+}
+
+function setLogs(rows){
+  localStorage.setItem('reservation_helper_logs', JSON.stringify(rows));
+}
+
+function parseCsv(text){
+  const clean = text.replace(/^\uFEFF/, '');
+  const rows = [];
+  let row = [];
+  let value = '';
+  let quoted = false;
+  for(let i = 0; i < clean.length; i++){
+    const ch = clean[i];
+    const next = clean[i + 1];
+    if(quoted){
+      if(ch === '"' && next === '"'){
+        value += '"';
+        i++;
+      }else if(ch === '"'){
+        quoted = false;
+      }else{
+        value += ch;
+      }
+    }else if(ch === '"'){
+      quoted = true;
+    }else if(ch === ','){
+      row.push(value);
+      value = '';
+    }else if(ch === '\n'){
+      row.push(value);
+      rows.push(row);
+      row = [];
+      value = '';
+    }else if(ch !== '\r'){
+      value += ch;
+    }
+  }
+  if(value || row.length) {
+    row.push(value);
+    rows.push(row);
+  }
+  const headers = (rows.shift() || []).map(h => h.trim());
+  return rows
+    .filter(cols => cols.some(cell => String(cell).trim() !== ''))
+    .map(cols => Object.fromEntries(headers.map((header,index) => [header, (cols[index] || '').trim()])));
+}
+
+function readCsvFile(file, target){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const rows = parseCsv(String(reader.result || ''));
+    if(target === 'app'){
+      state.appRows = rows;
+      els.appCsvMeta.textContent = `${file.name} / ${rows.length}件`;
+    }else{
+      state.adminRows = rows;
+      els.adminCsvMeta.textContent = `${file.name} / ${rows.length}件`;
+    }
+    renderCsvCompare();
+    toast('CSVを読み込みました');
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+function reservationId(row){
+  return String(row['予約番号'] || row['予約No'] || row['予約ID'] || row['受付番号'] || '').trim();
+}
+
+function isActiveAppRow(row){
+  const status = String(row['状態'] || '').trim();
+  return !status || status === '有効';
+}
+
+function otaLabel(code){
+  const value = String(code || '').trim();
+  const map = {
+    J:'じゃらん',
+    R:'楽天',
+    O:'オフィシャル',
+    HP:'HP',
+    G:'Google',
+    SP:'SmartPlus'
+  };
+  return map[value] || value || '未取得';
+}
+
+function sourceLabel(row){
+  const id = reservationId(row);
+  if(/^C\d+$/i.test(id)) return 'エアトリ';
+  if(/^JP\d/i.test(id)) return 'GoGoout';
+  return otaLabel(row['OTA']);
+}
+
+function phoneForAdmin(row){
+  const phone = String(row['TEL'] || row['電話番号'] || '').trim();
+  if(phone) return phone;
+  if(sourceLabel(row) === '楽天') return '0989889895';
+  return '';
+}
+
+function formatAdminNumber(value){
+  return String(value || '').replace(/[^\d.-]/g, '');
+}
+
+function compareCsv(){
+  if(!state.appRows.length || !state.adminRows.length){
+    toast('app側CSVとadmin側CSVを両方選択してください');
+    return;
+  }
+  const adminIds = new Set(state.adminRows.map(reservationId).filter(Boolean));
+  const appActive = state.appRows.filter(isActiveAppRow);
+  state.missingRows = appActive.filter(row => {
+    const id = reservationId(row);
+    return id && !adminIds.has(id);
+  });
+  renderCsvCompare();
+  toast(`${state.missingRows.length}件のappのみ予約を検出しました`);
+}
+
+function renderCsvCompare(){
+  const appActive = state.appRows.filter(isActiveAppRow);
+  const adminIds = new Set(state.adminRows.map(reservationId).filter(Boolean));
+  const matched = appActive.filter(row => adminIds.has(reservationId(row))).length;
+  document.getElementById('csvAppCount').textContent = appActive.length;
+  document.getElementById('csvAdminCount').textContent = state.adminRows.length;
+  document.getElementById('csvMatchedCount').textContent = matched;
+  document.getElementById('csvMissingCount').textContent = state.missingRows.length;
+  if(!state.appRows.length || !state.adminRows.length){
+    els.csvWarnings.innerHTML = '<div class="warn amber">app側CSVとadmin側CSVを選択すると、予約番号ベースで「appにある / adminにない」予約を表示します。</div>';
+  }else if(state.missingRows.length){
+    els.csvWarnings.innerHTML = '<div class="warn amber">appにあり、adminにない予約があります。adminでキャンセル削除済み・app反映待ちの可能性もあるため、再登録前にSlackやキャンセル通知を確認してください。</div>';
+  }else{
+    els.csvWarnings.innerHTML = '<div class="warn green">予約番号ベースでは「appにある / adminにない」予約はありません。</div>';
+  }
+  if(!state.missingRows.length){
+    els.missingBody.innerHTML = '<tr><td colspan="10"><span class="chip">appのみ予約はまだありません</span></td></tr>';
+    return;
+  }
+  els.missingBody.innerHTML = state.missingRows.map((row,index) => `
+    <tr>
+      <td><button class="copy-btn" type="button" data-use-missing="${index}">確認へ</button></td>
+      <td><span class="chip">appのみ / adminなし</span></td>
+      <td>${escapeHtml(reservationId(row))}</td>
+      <td>${escapeHtml(sourceLabel(row))}</td>
+      <td>${escapeHtml(row['予約者'] || '')}</td>
+      <td>${escapeHtml(`${row['貸出日'] || ''} ${row['貸出時間'] || ''}`.trim())}</td>
+      <td>${escapeHtml(`${row['返却日'] || ''} ${row['返却時間'] || ''}`.trim())}</td>
+      <td>${escapeHtml(row['車種クラス'] || '')}</td>
+      <td>${escapeHtml(row['配車車両'] || '')}${row['ナンバー'] ? ' / ' + escapeHtml(row['ナンバー']) : ''}</td>
+      <td>${escapeHtml(formatAdminNumber(row['料金']))}</td>
+    </tr>
+  `).join('');
+}
+
+function rowText(row){
+  return Object.values(row || {}).map(value => String(value || '')).join(' ');
+}
+
+function summarizeRow(row){
+  const id = reservationId(row) || row['予約番号'] || '';
+  const customer = row['予約者'] || row['予約者名'] || row['顧客'] || '';
+  const start = [row['貸出日'], row['貸出時間']].filter(Boolean).join(' ');
+  const end = [row['返却日'], row['返却時間']].filter(Boolean).join(' ');
+  const vehicle = row['配車車両'] || row['車両クラス名'] || row['登録車種'] || row['app割当車両'] || '';
+  const price = formatAdminNumber(row['料金'] || row['請求金額'] || '');
+  return [id, customer, start && `貸出:${start}`, end && `返却:${end}`, vehicle, price && `料金:${price}`].filter(Boolean).join(' / ');
+}
+
+function searchCsvAndLogs(){
+  const query = els.csvSearchInput.value.trim();
+  if(!query){
+    toast('予約番号か名前を入れてください');
+    return;
+  }
+  const needle = query.toLowerCase();
+  const sources = [
+    ['app側CSV', state.appRows],
+    ['admin側CSV', state.adminRows],
+    ['作業ログ', getLogs()]
+  ];
+  els.csvSearchResult.innerHTML = sources.map(([label, rows]) => {
+    const hits = rows.filter(row => rowText(row).toLowerCase().includes(needle));
+    if(!hits.length){
+      return `<div class="source-hit"><strong>${escapeHtml(label)}: 見つかりません</strong><span>${escapeHtml(query)} はこのデータ内にありません。</span></div>`;
+    }
+    return `<div class="source-hit"><strong>${escapeHtml(label)}: ${hits.length}件</strong>${hits.slice(0,5).map(row => `<span>${escapeHtml(summarizeRow(row))}</span>`).join('')}</div>`;
+  }).join('');
+}
+
+function toast(message){
+  els.toast.textContent = message;
+  els.toast.classList.add('show');
+  setTimeout(() => els.toast.classList.remove('show'), 1600);
+}
+
+function pickLine(text, keys){
+  const lines = text.split(/\n/).map(line => line.trim()).filter(Boolean);
+  for(const key of keys){
+    const hit = lines.find(line => line.includes(key));
+    if(hit){
+      return hit.replace(new RegExp('^.*?' + key + '\\s*[:：]?\\s*'), '').trim();
+    }
+  }
+  return '';
+}
+
+function pickDate(text, keys){
+  const value = pickLine(text, keys);
+  if(value) return normalizeDate(value);
+  const pattern = /20\d{2}[\/\-.年]\d{1,2}[\/\-.月]\d{1,2}日?\s*\d{1,2}[:時]\d{2}?/;
+  const hit = text.match(pattern);
+  return hit ? normalizeDate(hit[0]) : '';
+}
+
+function normalizeDate(value){
+  return value
+    .replace(/[年月]/g,'/')
+    .replace(/日/g,'')
+    .replace(/時/g,':')
+    .replace(/分/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function pickPhone(text){
+  const explicit = pickLine(text, ['電話番号','TEL','Tel','tel','携帯']);
+  if(explicit) return explicit;
+  const hit = text.match(/0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4}/);
+  return hit ? hit[0] : '';
+}
+
+function pickPrice(text){
+  const explicit = pickLine(text, ['料金','合計','金額','支払']);
+  if(explicit) return formatAdminNumber(explicit);
+  const hit = text.match(/[0-9,]+円/);
+  return hit ? formatAdminNumber(hit[0]) : '';
+}
+
+function pickPrefecture(text){
+  const explicit = pickLine(text, ['都道府県','住所','所在地']);
+  const target = explicit || text;
+  const hit = target.match(/北海道|(?:京都|大阪)府|.{2,3}県|東京都/);
+  return hit ? hit[0] : '';
+}
+
+function pickBirthDate(text){
+  const explicit = pickLine(text, ['生年月日','誕生日','生年']);
+  if(explicit) return normalizeDate(explicit);
+  const hit = text.match(/(?:19|20)\d{2}[\/\-.年]\d{1,2}[\/\-.月]\d{1,2}日?/);
+  return hit ? normalizeDate(hit[0]) : '';
+}
+
+function splitName(name){
+  const clean = String(name || '').replace(/様$/, '').trim();
+  const parts = clean.split(/[\s　]+/).filter(Boolean);
+  if(parts.length >= 2) return { lastName: parts[0], firstName: parts.slice(1).join(' ') };
+  return { lastName: clean, firstName: '' };
+}
+
+function findVehicle(text){
+  const direct = pickLine(text, ['車両クラス','車種','クラス','プラン']);
+  const haystack = direct || text;
+  const mappings = getMappings();
+  const found = mappings.find(row => haystack.toLowerCase().includes(row.external.toLowerCase()));
+  return {
+    external: direct,
+    admin: found ? found.admin : '',
+    className: found ? found.className : '',
+    mapped: Boolean(found)
+  };
+}
+
+function parseReservation(){
+  const text = els.rawText.value.trim();
+  if(!text){
+    toast('予約情報を貼り付けてください');
+    return;
+  }
+  const vehicle = findVehicle(text);
+  const customer = pickLine(text, ['お客様名','氏名','名前','利用者']) || '';
+  const nameParts = splitName(customer);
+  const parsedPrefecture = pickPrefecture(text);
+  const parsedBirthDate = pickBirthDate(text);
+  if(nameParts.lastName && !els.lastName.value) els.lastName.value = nameParts.lastName;
+  if(nameParts.firstName && !els.firstName.value) els.firstName.value = nameParts.firstName;
+  if(parsedPrefecture && !els.prefecture.value) els.prefecture.value = parsedPrefecture;
+  if(parsedBirthDate && !els.birthDate.value) els.birthDate.value = parsedBirthDate;
+  state.parsed = {
+    site: els.sourceSite.value,
+    reservationNo: pickLine(text, ['予約番号','予約No','予約ID','受付番号']) || guessReservationNo(text),
+    customer,
+    lastName: els.lastName.value.trim() || nameParts.lastName,
+    firstName: els.firstName.value.trim() || nameParts.firstName,
+    prefecture: els.prefecture.value.trim() || parsedPrefecture,
+    birthDate: els.birthDate.value.trim() || parsedBirthDate,
+    phone: pickPhone(text),
+    startAt: pickDate(text, ['利用日時','貸出日時','出発日時','開始日時','配車日時']),
+    endAt: pickDate(text, ['返却日時','返車日時','終了日時']),
+    externalVehicle: vehicle.external,
+    adminVehicle: vehicle.admin,
+    className: vehicle.className,
+    appAssignedVehicle: els.appAssignedVehicle.value.trim(),
+    adminTargetVehicle: els.adminTargetVehicle.value.trim(),
+    price: pickPrice(text),
+    memo: buildMemo(text)
+  };
+  state.warnings = validate(state.parsed, vehicle.mapped);
+  renderResult();
+  toast('解析しました');
+}
+
+function guessReservationNo(text){
+  const hit = text.match(/[A-Z]{2,5}[-_ ]?\d{5,}/i);
+  return hit ? hit[0] : '';
+}
+
+function buildMemo(text){
+  const option = pickLine(text, ['オプション','備考','要望']);
+  return option || text.split(/\n/).slice(0,3).join(' / ');
+}
+
+function validate(data, mapped){
+  const warnings = [];
+  const required = [
+    ['reservationNo','予約番号が未取得です'],
+    ['customer','顧客名が未取得です'],
+    ['startAt','貸出日時が未取得です'],
+    ['endAt','返却日時が未取得です'],
+    ['adminVehicle','admin登録用の車種が未確定です']
+  ];
+  required.forEach(([key,message]) => {
+    if(!data[key]) warnings.push({ level:'red', message });
+  });
+  if(!mapped) warnings.push({ level:'amber', message:'車種対応表に一致する表記がありません。対応表を追加するか、手動で確認してください。' });
+  if(!data.phone) warnings.push({ level:'amber', message:'電話番号が未取得です。admin入力時に原文を確認してください。' });
+  if(!data.lastName || !data.firstName) warnings.push({ level:'amber', message:'姓名が分離できていません。admin入力前に姓・名を確認してください。' });
+  if(!data.prefecture) warnings.push({ level:'amber', message:'都道府県が未取得です。admin入力前に確認してください。' });
+  if(!data.birthDate) warnings.push({ level:'amber', message:'生年月日が未取得です。admin入力前に確認してください。' });
+  if(!data.appAssignedVehicle) warnings.push({ level:'amber', message:'appで割り当てられた実車両を入力してください。' });
+  if(!data.adminTargetVehicle) warnings.push({ level:'amber', message:'adminで登録する該当車両を入力してください。' });
+  if(!data.price) warnings.push({ level:'amber', message:'料金が未取得です。料金系統は必ず予約サイト原文と照合してください。' });
+  if(data.csvAppOnly) warnings.push({ level:'amber', message:'CSV判定: appにありますがadminにありません。adminでキャンセル削除済み・app反映待ちの可能性があるため、再登録前にキャンセル通知とSlackを確認してください。' });
+  if(warnings.length === 0) warnings.push({ level:'green', message:'必須項目と車種対応が揃っています。登録前チェックを行ってください。' });
+  return warnings;
+}
+
+function useMissingRow(index){
+  const row = state.missingRows[index];
+  if(!row) return;
+  const customer = row['予約者'] || '';
+  const nameParts = splitName(customer);
+  const assigned = [row['配車車両'], row['ナンバー']].filter(Boolean).join(' / ');
+  const source = sourceLabel(row);
+  els.sourceSite.value = [...els.sourceSite.options].some(option => option.value === source) ? source : '自社外部';
+  els.appAssignedVehicle.value = assigned;
+  els.adminTargetVehicle.value = assigned;
+  els.lastName.value = nameParts.lastName;
+  els.firstName.value = nameParts.firstName;
+  els.prefecture.value = '';
+  els.birthDate.value = '';
+  state.parsed = {
+    site: source,
+    reservationNo: reservationId(row),
+    customer,
+    lastName: nameParts.lastName,
+    firstName: nameParts.firstName,
+    prefecture: '',
+    birthDate: '',
+    phone: phoneForAdmin(row),
+    startAt: `${row['貸出日'] || ''} ${row['貸出時間'] || ''}`.trim(),
+    endAt: `${row['返却日'] || ''} ${row['返却時間'] || ''}`.trim(),
+    externalVehicle: row['車種クラス'] || '',
+    adminVehicle: row['車種クラス'] || '',
+    className: row['車種クラス'] || '',
+    appAssignedVehicle: assigned,
+    adminTargetVehicle: assigned,
+    price: formatAdminNumber(row['料金']),
+    csvAppOnly: true,
+    csvStatusNote: 'appにあり / adminになし。キャンセル削除済み・app反映待ちの可能性あり',
+    memo: [
+      'CSV判定: appのみ/adminなし',
+      row['補償'] ? `補償:${row['補償']}` : '',
+      row['便名'] ? `便名:${row['便名']}` : '',
+      row['DEL場所'] ? `DEL:${row['DEL場所']}` : '',
+      row['COL場所'] ? `COL:${row['COL場所']}` : ''
+    ].filter(Boolean).join(' / ')
+  };
+  state.warnings = validate(state.parsed, Boolean(state.parsed.adminVehicle));
+  renderResult();
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelector('[data-view="result"]').classList.add('active');
+  document.getElementById('view-result').classList.add('active');
+  toast('登録内容へ転記しました');
+}
+
+function renderResult(){
+  const data = state.parsed;
+  const hasParsed = Object.keys(data).length > 0;
+  if(!hasParsed){
+    document.getElementById('scoreRequired').textContent = '0/5';
+    document.getElementById('scoreWarning').textContent = '-';
+    document.getElementById('scoreMapped').textContent = '未';
+    document.getElementById('scoreReady').textContent = '未';
+    els.warnings.innerHTML = '<div class="warn amber">予約情報を貼り付けて解析してください。admin登録前の確認結果がここに表示されます。</div>';
+  }
+  const warningCount = state.warnings.filter(w => w.level !== 'green').length;
+  const requiredKeys = ['reservationNo','customer','startAt','endAt','adminVehicle'];
+  const filled = requiredKeys.filter(key => data[key]).length;
+  if(hasParsed){
+    document.getElementById('scoreRequired').textContent = `${filled}/${requiredKeys.length}`;
+    document.getElementById('scoreWarning').textContent = warningCount;
+    document.getElementById('scoreMapped').textContent = data.adminVehicle ? '済' : '未';
+    document.getElementById('scoreReady').textContent = warningCount === 0 ? '可' : '要確認';
+    els.warnings.innerHTML = state.warnings.map(w => `<div class="warn ${w.level}">${escapeHtml(w.message)}</div>`).join('');
+  }
+
+  const fields = [
+    ['予約サイト', data.site],
+    ['CSV判定', data.csvStatusNote],
+    ['予約番号', data.reservationNo],
+    ['顧客名', data.customer],
+    ['姓', data.lastName],
+    ['名', data.firstName],
+    ['都道府県', data.prefecture],
+    ['生年月日', data.birthDate],
+    ['電話番号', data.phone],
+    ['貸出日時', data.startAt],
+    ['返却日時', data.endAt],
+    ['社外車種表記', data.externalVehicle],
+    ['admin登録車種', data.adminVehicle],
+    ['車両クラス', data.className],
+    ['app割当車両', data.appAssignedVehicle],
+    ['admin登録対象車両', data.adminTargetVehicle],
+    ['料金', data.price],
+    ['メモ', data.memo]
+  ];
+  els.adminFields.innerHTML = fields.map(([label,value]) => `
+    <div class="copy-card">
+      <div class="copy-head">
+        <div class="copy-label">${escapeHtml(label)}</div>
+        <button class="copy-btn" type="button" data-copy="${escapeAttr(value || '')}">コピー</button>
+      </div>
+      <div class="copy-value ${value ? '' : 'muted'}">${escapeHtml(value || '未取得')}</div>
+    </div>
+  `).join('');
+}
+
+function renderMappings(){
+  const rows = getMappings();
+  els.mappingBody.innerHTML = rows.map((row,index) => `
+    <tr>
+      <td><input class="mini-input" value="${escapeAttr(row.external)}" data-map-index="${index}" data-map-key="external"></td>
+      <td><input class="mini-input" value="${escapeAttr(row.admin)}" data-map-index="${index}" data-map-key="admin"></td>
+      <td><input class="mini-input" value="${escapeAttr(row.className)}" data-map-index="${index}" data-map-key="className"></td>
+      <td class="right"><button class="copy-btn" type="button" data-delete-map="${index}">削除</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderLogs(){
+  const logs = getLogs();
+  if(logs.length === 0){
+    els.logBody.innerHTML = '<tr><td colspan="7"><span class="chip">ログはまだありません</span></td></tr>';
+    return;
+  }
+  let currentDate = '';
+  els.logBody.innerHTML = logs.map(log => {
+    const workDate = log.workDate || String(log.createdAt || '').split(' ')[0] || '日付未取得';
+    const divider = workDate !== currentDate ? `<tr class="date-divider"><td colspan="7"><span>${escapeHtml(workDate)} の作業</span></td></tr>` : '';
+    currentDate = workDate;
+    return `${divider}
+      <tr>
+        <td>${escapeHtml(log.createdAt)}</td>
+        <td>${escapeHtml(log.reservationNo || '未取得')}</td>
+        <td>${escapeHtml(log.customer || '未取得')}</td>
+        <td>${escapeHtml(log.adminVehicle || '未確定')}</td>
+        <td>${escapeHtml(log.appAssignedVehicle || '未入力')}</td>
+        <td>${escapeHtml(log.adminTargetVehicle || '未入力')}</td>
+        <td>${escapeHtml(log.status)}</td>
+      </tr>`;
+  }).join('');
+}
+
+function saveLog(){
+  const data = state.parsed;
+  if(!Object.keys(data).length){
+    toast('先に予約情報を解析してください');
+    return;
+  }
+  const checks = ['chkSlack','chkApp','chkVehicle','chkDate','chkPrice','chkAdmin','chkStamp'].map(id => document.getElementById(id).checked);
+  const status = checks.every(Boolean) && state.warnings.every(w => w.level === 'green') ? '確認済み' : '要確認';
+  const logs = getLogs();
+  const now = new Date();
+  logs.unshift({
+    createdAt: now.toLocaleString('ja-JP'),
+    workDate: now.toLocaleDateString('ja-JP'),
+    reservationNo: data.reservationNo,
+    customer: data.customer,
+    adminVehicle: data.adminVehicle,
+    appAssignedVehicle: data.appAssignedVehicle,
+    adminTargetVehicle: data.adminTargetVehicle,
+    status
+  });
+  setLogs(logs.slice(0,100));
+  renderLogs();
+  toast('作業ログに保存しました');
+}
+
+function exportLogs(){
+  const logs = getLogs();
+  const header = ['日時','予約番号','顧客','登録車種','app割当車両','admin登録対象車両','状態'];
+  const rows = logs.map(log => [log.createdAt,log.reservationNo,log.customer,log.adminVehicle,log.appAssignedVehicle,log.adminTargetVehicle,log.status]);
+  const csv = [header,...rows].map(row => row.map(cell => `"${String(cell || '').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `admin登録作業ログ_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportMissingRows(){
+  if(!state.missingRows.length){
+    toast('appのみ予約がありません');
+    return;
+  }
+  const header = ['判定','予約番号','予約元','予約者','貸出日','貸出時間','返却日','返却時間','車種クラス','配車車両','ナンバー','TEL','料金'];
+  const rows = state.missingRows.map(row => [
+    'appにあり/adminになし',
+    reservationId(row),
+    sourceLabel(row),
+    row['予約者'],
+    row['貸出日'],
+    row['貸出時間'],
+    row['返却日'],
+    row['返却時間'],
+    row['車種クラス'],
+    row['配車車両'],
+    row['ナンバー'],
+    phoneForAdmin(row),
+    row['料金']
+  ]);
+  const csv = [header,...rows].map(row => row.map(cell => `"${String(cell || '').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `appのみ_adminなし_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function escapeAttr(value){
+  return escapeHtml(value).replace(/`/g,'&#96;');
+}
+
+document.getElementById('parseBtn').addEventListener('click', parseReservation);
+document.getElementById('clearBtn').addEventListener('click', () => {
+  els.rawText.value = '';
+  els.appAssignedVehicle.value = '';
+  els.adminTargetVehicle.value = '';
+  els.lastName.value = '';
+  els.firstName.value = '';
+  els.prefecture.value = '';
+  els.birthDate.value = '';
+  state.parsed = {};
+  state.warnings = [];
+  renderResult();
+});
+document.getElementById('sampleBtn').addEventListener('click', () => {
+  els.appAssignedVehicle.value = 'N-BOX 白 12-34';
+  els.adminTargetVehicle.value = 'N-BOX 白 12-34';
+  els.rawText.value = `予約番号: JLN-483920
+お客様名: 山田 太郎
+電話番号: 090-1234-5678
+都道府県: 沖縄県
+生年月日: 1990/01/01
+利用日時: 2026/05/21 10:00
+返却日時: 2026/05/23 18:00
+車両クラス: 軽自動車
+料金: 18000
+オプション: 免責補償あり / チャイルドシートなし`;
+  parseReservation();
+});
+document.getElementById('saveLogBtn').addEventListener('click', saveLog);
+document.getElementById('exportLogBtn').addEventListener('click', exportLogs);
+document.getElementById('compareCsvBtn').addEventListener('click', compareCsv);
+document.getElementById('exportMissingBtn').addEventListener('click', exportMissingRows);
+document.getElementById('csvSearchBtn').addEventListener('click', searchCsvAndLogs);
+els.csvSearchInput.addEventListener('keydown', event => {
+  if(event.key === 'Enter') searchCsvAndLogs();
+});
+els.appCsvFile.addEventListener('change', event => readCsvFile(event.target.files[0], 'app'));
+els.adminCsvFile.addEventListener('change', event => readCsvFile(event.target.files[0], 'admin'));
+document.getElementById('clearLogBtn').addEventListener('click', () => {
+  if(confirm('作業ログを削除しますか？')){
+    setLogs([]);
+    renderLogs();
+    toast('ログを削除しました');
+  }
+});
+document.getElementById('addMapBtn').addEventListener('click', () => {
+  const rows = getMappings();
+  rows.push({ external:'', admin:'', className:'' });
+  setMappings(rows);
+  renderMappings();
+});
+document.getElementById('resetMapBtn').addEventListener('click', () => {
+  if(confirm('車種対応表を初期状態に戻しますか？')){
+    setMappings([...defaultMappings]);
+    renderMappings();
+    toast('初期対応に戻しました');
+  }
+});
+document.addEventListener('click', event => {
+  const tab = event.target.closest('.tab');
+  if(tab){
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`view-${tab.dataset.view}`).classList.add('active');
+  }
+  const copy = event.target.closest('[data-copy]');
+  if(copy){
+    navigator.clipboard.writeText(copy.dataset.copy || '').then(() => toast('コピーしました'));
+  }
+  const del = event.target.closest('[data-delete-map]');
+  if(del){
+    const rows = getMappings();
+    rows.splice(Number(del.dataset.deleteMap),1);
+    setMappings(rows);
+    renderMappings();
+  }
+  const missing = event.target.closest('[data-use-missing]');
+  if(missing){
+    useMissingRow(Number(missing.dataset.useMissing));
+  }
+});
+document.addEventListener('input', event => {
+  const input = event.target.closest('[data-map-index]');
+  if(input){
+    const rows = getMappings();
+    rows[Number(input.dataset.mapIndex)][input.dataset.mapKey] = input.value;
+    setMappings(rows);
+  }
+  const manualIds = ['appAssignedVehicle','adminTargetVehicle','lastName','firstName','prefecture','birthDate'];
+  if(manualIds.includes(event.target.id) && Object.keys(state.parsed).length){
+    state.parsed[event.target.id] = event.target.value.trim();
+    state.warnings = validate(state.parsed, Boolean(state.parsed.adminVehicle));
+    renderResult();
+  }
+});
+
+renderResult();
+renderCsvCompare();
+renderMappings();
+renderLogs();
+</script>
+</body>
+</html>
