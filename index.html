@@ -257,6 +257,58 @@ textarea:focus,input:focus,select:focus{
   word-break:break-word;
 }
 .copy-value.muted{color:#9AA5B7;font-weight:700}
+.copy-runner{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  margin-bottom:14px;
+  overflow:hidden;
+}
+.runner-head{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  padding:12px;
+  background:#F7FAFD;
+  border-bottom:1px solid var(--line);
+}
+.runner-title{font-weight:900}
+.runner-sub{color:var(--muted);font-size:12px;margin-top:2px}
+.runner-body{padding:12px}
+.runner-current{
+  display:grid;
+  grid-template-columns:120px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#FBFCFE;
+  margin-bottom:10px;
+}
+.runner-label{font-size:12px;color:var(--muted);font-weight:900}
+.runner-value{font-weight:900;word-break:break-word}
+.runner-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:10px;
+}
+.runner-item{
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:4px 8px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:800;
+  background:#fff;
+}
+.runner-item.active{
+  color:#fff;
+  background:var(--blue);
+  border-color:var(--blue);
+}
 .mapping-table,.log-table,.csv-table{
   width:100%;
   border-collapse:collapse;
@@ -522,6 +574,7 @@ th{
               <div class="status"><div class="status-num" id="scoreReady">未</div><div class="status-label">登録準備</div></div>
             </div>
             <div class="warn-list" id="warnings"></div>
+            <div class="copy-runner" id="copyRunner"></div>
             <div class="admin-grid" id="adminFields"></div>
             <div style="margin-top:14px" class="panel">
               <div class="panel-head">
@@ -624,7 +677,9 @@ const state = {
   warnings: [],
   appRows: [],
   adminRows: [],
-  missingRows: []
+  missingRows: [],
+  copyQueue: [],
+  copyIndex: 0
 };
 
 const els = {
@@ -1063,6 +1118,105 @@ function useMissingRow(index){
   toast('登録内容へ転記しました');
 }
 
+function adminCopyFields(data){
+  return [
+    ['予約番号', data.reservationNo],
+    ['予約者の姓', data.lastName],
+    ['予約者の名', data.firstName],
+    ['電話番号', data.phone],
+    ['決済金額', data.price]
+  ].filter(([,value]) => value);
+}
+
+function writeClipboard(text, message){
+  if(!text){
+    toast('コピーする内容がありません');
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => toast(message || 'コピーしました'));
+}
+
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function copyQueueToClipboardHistory(){
+  if(!state.copyQueue.length){
+    toast('先に予約情報を解析してください');
+    return;
+  }
+  try{
+    for(const item of state.copyQueue){
+      await navigator.clipboard.writeText(item.value);
+      await sleep(220);
+    }
+    state.copyIndex = state.copyQueue.length;
+    renderCopyRunner();
+    toast(`${state.copyQueue.length}項目をClibor用に順番登録しました`);
+  }catch(error){
+    toast('ブラウザが連続コピーを止めました。次をコピーを使ってください');
+  }
+}
+
+function resetCopyQueue(){
+  state.copyIndex = 0;
+  renderCopyRunner();
+}
+
+function copyNextQueueItem(){
+  if(!state.copyQueue.length){
+    toast('先に予約情報を解析してください');
+    return;
+  }
+  const item = state.copyQueue[state.copyIndex] || state.copyQueue[0];
+  writeClipboard(item.value, `${item.label} をコピーしました`);
+  state.copyIndex = Math.min(state.copyIndex + 1, state.copyQueue.length);
+  renderCopyRunner();
+}
+
+function copyAllTabSeparated(){
+  if(!state.copyQueue.length){
+    toast('先に予約情報を解析してください');
+    return;
+  }
+  writeClipboard(state.copyQueue.map(item => item.value).join('\t'), 'タブ区切りで全項目をコピーしました');
+}
+
+function renderCopyRunner(){
+  const wrap = document.getElementById('copyRunner');
+  if(!wrap) return;
+  if(!state.copyQueue.length){
+    wrap.innerHTML = `
+      <div class="runner-head">
+        <div><div class="runner-title">連続コピー</div><div class="runner-sub">予約情報を解析すると、admin入力順のコピーリストが出ます。</div></div>
+      </div>`;
+    return;
+  }
+  const current = state.copyQueue[state.copyIndex];
+  wrap.innerHTML = `
+    <div class="runner-head">
+      <div>
+        <div class="runner-title">連続コピー</div>
+        <div class="runner-sub">CliborをFIFOモードにしてから順番登録してください。登録順は 予約番号 → 姓 → 名 → 電話番号 → 決済金額 です。</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-ghost" type="button" data-copy-reset>先頭へ</button>
+        <button class="btn btn-green" type="button" data-copy-history>Clibor順番登録</button>
+        <button class="btn btn-dark" type="button" data-copy-all-tabs>タブ区切りで全コピー</button>
+        <button class="btn btn-primary" type="button" data-copy-next>次をコピー</button>
+      </div>
+    </div>
+    <div class="runner-body">
+      <div class="runner-current">
+        <div class="runner-label">${current ? `${state.copyIndex + 1}/${state.copyQueue.length} ${escapeHtml(current.label)}` : '完了'}</div>
+        <div class="runner-value">${current ? escapeHtml(current.value) : 'すべてコピー済みです。先頭へ戻すと再開できます。'}</div>
+      </div>
+      <div class="runner-list">
+        ${state.copyQueue.map((item,index) => `<span class="runner-item ${index === state.copyIndex ? 'active' : ''}">${index + 1}. ${escapeHtml(item.label)}</span>`).join('')}
+      </div>
+    </div>`;
+}
+
 function renderResult(){
   const data = state.parsed;
   const hasParsed = Object.keys(data).length > 0;
@@ -1104,6 +1258,9 @@ function renderResult(){
     ['料金', data.price],
     ['メモ', data.memo]
   ];
+  state.copyQueue = hasParsed ? adminCopyFields(data).map(([label,value]) => ({ label, value: String(value) })) : [];
+  state.copyIndex = Math.min(state.copyIndex, state.copyQueue.length);
+  renderCopyRunner();
   els.adminFields.innerHTML = fields.map(([label,value]) => `
     <div class="copy-card">
       <div class="copy-head">
@@ -1297,7 +1454,24 @@ document.addEventListener('click', event => {
   }
   const copy = event.target.closest('[data-copy]');
   if(copy){
-    navigator.clipboard.writeText(copy.dataset.copy || '').then(() => toast('コピーしました'));
+    writeClipboard(copy.dataset.copy || '', 'コピーしました');
+  }
+  const copyNext = event.target.closest('[data-copy-next]');
+  if(copyNext){
+    copyNextQueueItem();
+  }
+  const copyReset = event.target.closest('[data-copy-reset]');
+  if(copyReset){
+    resetCopyQueue();
+    toast('先頭に戻しました');
+  }
+  const copyAllTabs = event.target.closest('[data-copy-all-tabs]');
+  if(copyAllTabs){
+    copyAllTabSeparated();
+  }
+  const copyHistory = event.target.closest('[data-copy-history]');
+  if(copyHistory){
+    copyQueueToClipboardHistory();
   }
   const del = event.target.closest('[data-delete-map]');
   if(del){
