@@ -1145,10 +1145,19 @@ async function copyQueueToClipboardHistory(){
     toast('先に予約情報を解析してください');
     return;
   }
+  const missing = state.copyQueue.filter(item => !String(item.value || '').trim()).map(item => item.label);
+  if(missing.length){
+    toast(`${missing.join('・')} が未取得です。先に内容を確認してください`);
+    return;
+  }
   try{
-    for(const item of state.copyQueue){
+    for(let index = 0; index < state.copyQueue.length; index += 1){
+      const item = state.copyQueue[index];
       await navigator.clipboard.writeText(item.value);
-      await sleep(220);
+      state.copyIndex = index + 1;
+      renderCopyRunner();
+      toast(`Clibor登録中 ${index + 1}/${state.copyQueue.length}: ${item.label}`);
+      await sleep(900);
     }
     state.copyIndex = state.copyQueue.length;
     renderCopyRunner();
