@@ -840,7 +840,11 @@ function getSharedLogUrl(){
 }
 
 function normalizeSharedLogUrl(url){
-  return String(url || '').trim();
+  const raw = String(url || '').trim();
+  if(!raw) return '';
+  const baseMatch = raw.match(/^(https:\/\/script\.google\.com\/macros\/s\/[^/?#]+)\/?$/);
+  if(baseMatch) return `${baseMatch[1]}/exec`;
+  return raw;
 }
 
 function isValidSharedLogUrl(url){
