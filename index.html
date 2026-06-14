@@ -756,6 +756,23 @@ function getSharedLogUrl(){
   return localStorage.getItem('reservation_helper_shared_log_url') || '';
 }
 
+function normalizeSharedLogUrl(url){
+  return String(url || '').trim();
+}
+
+function isValidSharedLogUrl(url){
+  return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec(?:\?.*)?$/.test(url)
+    || /^https:\/\/script\.googleusercontent\.com\/macros\/echo\?.+/.test(url);
+}
+
+function buildSharedLogReadUrl(url, callbackName){
+  const target = new URL(url);
+  target.searchParams.set('action', 'list');
+  target.searchParams.set('callback', callbackName);
+  target.searchParams.set('t', Date.now());
+  return target.toString();
+}
+
 function setSharedLogUrl(url){
   localStorage.setItem('reservation_helper_shared_log_url', url);
 }
@@ -1392,16 +1409,16 @@ function mergeLogs(localLogs, sharedLogs){
 }
 
 function requestSharedLogs(){
-  const url = getSharedLogUrl();
+  const url = normalizeSharedLogUrl(getSharedLogUrl());
   if(!url) return Promise.reject(new Error('共有ログURLが未設定です'));
+  if(!isValidSharedLogUrl(url)) return Promise.reject(new Error('共有ログURLは Apps Script の /exec URLを入れてください'));
   return new Promise((resolve, reject) => {
     const callbackName = `sharedLogCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement('script');
-    const separator = url.includes('?') ? '&' : '?';
     const timer = setTimeout(() => {
       cleanup();
       reject(new Error('共有ログの読み込みがタイムアウトしました'));
-    }, 15000);
+    }, 30000);
     function cleanup(){
       clearTimeout(timer);
       delete window[callbackName];
@@ -1419,7 +1436,7 @@ function requestSharedLogs(){
       cleanup();
       reject(new Error('共有ログURLに接続できませんでした'));
     };
-    script.src = `${url}${separator}action=list&callback=${encodeURIComponent(callbackName)}&t=${Date.now()}`;
+    script.src = buildSharedLogReadUrl(url, callbackName);
     document.body.appendChild(script);
   });
 }
@@ -1438,13 +1455,13 @@ async function syncSharedLogs(){
     updateSharedLogStatus(`共有ログ: 読み込み完了（${sharedLogs.length}件）`);
     toast('共有ログを読み込みました');
   }catch(error){
-    updateSharedLogStatus('共有ログ: 読み込み失敗');
+    updateSharedLogStatus(`共有ログ: 読み込み失敗（${error.message || '原因不明'}）`);
     toast(error.message || '共有ログを読み込めませんでした');
   }
 }
 
 function appendSharedLog(log){
-  const url = getSharedLogUrl();
+  const url = normalizeSharedLogUrl(getSharedLogUrl());
   if(!url) return;
   return fetch(url, {
     method:'POST',
@@ -1598,8 +1615,8 @@ document.getElementById('sampleBtn').addEventListener('click', () => {
 document.getElementById('saveLogBtn').addEventListener('click', saveLog);
 document.getElementById('exportLogBtn').addEventListener('click', exportLogs);
 document.getElementById('saveSharedLogUrlBtn').addEventListener('click', () => {
-  const url = els.sharedLogUrl.value.trim();
-  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(url)){
+  const url = normalizeSharedLogUrl(els.sharedLogUrl.value);
+  if(!isValidSharedLogUrl(url)){
     toast('Google Apps Script の /exec URLを入力してください');
     return;
   }
