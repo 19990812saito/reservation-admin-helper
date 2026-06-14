@@ -424,6 +424,16 @@ th{
 .flow-kicker{color:var(--cyan);font-weight:900;font-size:11px}
 .flow-title{font-weight:900;font-size:13px;margin-top:2px}
 .flow-text{color:var(--muted);font-size:12px;margin-top:2px}
+.shared-log-box{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:12px;
+  background:#FBFCFE;
+  margin-bottom:12px;
+}
+.shared-log-title{font-weight:800;margin-bottom:4px}
+.shared-log-text{color:var(--muted);font-size:12px;margin-bottom:10px}
+.shared-log-status{color:var(--muted);font-size:12px;font-weight:800}
 .toast{
   position:fixed;
   left:50%;
@@ -645,6 +655,20 @@ th{
           </div>
 
           <div id="view-log" class="view">
+            <div class="shared-log-box">
+              <div class="shared-log-title">共有作業ログ</div>
+              <div class="shared-log-text">全員で同じ作業ログを見る場合は、Google Apps Script の共有ログURLを入れて有効化してください。未設定の場合は、このブラウザだけのローカル保存です。</div>
+              <div class="row">
+                <input id="sharedLogUrl" placeholder="共有ログURL 例: https://script.google.com/macros/s/.../exec">
+                <button class="btn btn-green" id="saveSharedLogUrlBtn" type="button">共有ログを有効化</button>
+              </div>
+              <div class="toolbar" style="margin-top:10px">
+                <button class="btn btn-ghost" id="syncSharedLogsBtn" type="button">共有ログを読み込み</button>
+                <button class="btn btn-ghost" id="uploadLocalLogsBtn" type="button">ローカルログを共有へ送信</button>
+                <button class="btn btn-ghost" id="disableSharedLogBtn" type="button">共有ログを無効化</button>
+                <span class="shared-log-status" id="sharedLogStatus">共有ログ: 未設定（ローカル保存）</span>
+              </div>
+            </div>
             <div class="toolbar" style="margin-bottom:12px">
               <button class="btn btn-ghost" id="exportLogBtn" type="button">CSV出力</button>
               <button class="btn btn-ghost" id="clearLogBtn" type="button">ログ削除</button>
@@ -703,6 +727,8 @@ const els = {
   missingBody: document.getElementById('missingBody'),
   csvSearchInput: document.getElementById('csvSearchInput'),
   csvSearchResult: document.getElementById('csvSearchResult'),
+  sharedLogUrl: document.getElementById('sharedLogUrl'),
+  sharedLogStatus: document.getElementById('sharedLogStatus'),
   toast: document.getElementById('toast')
 };
 
@@ -724,6 +750,32 @@ function getLogs(){
 
 function setLogs(rows){
   localStorage.setItem('reservation_helper_logs', JSON.stringify(rows));
+}
+
+function getSharedLogUrl(){
+  return localStorage.getItem('reservation_helper_shared_log_url') || '';
+}
+
+function setSharedLogUrl(url){
+  localStorage.setItem('reservation_helper_shared_log_url', url);
+}
+
+function clearSharedLogUrl(){
+  localStorage.removeItem('reservation_helper_shared_log_url');
+}
+
+function sharedLogEnabled(){
+  return Boolean(getSharedLogUrl());
+}
+
+function updateSharedLogStatus(message){
+  if(els.sharedLogUrl) els.sharedLogUrl.value = getSharedLogUrl();
+  if(!els.sharedLogStatus) return;
+  if(message){
+    els.sharedLogStatus.textContent = message;
+    return;
+  }
+  els.sharedLogStatus.textContent = sharedLogEnabled() ? '共有ログ: 有効（保存時に全員共有へ反映）' : '共有ログ: 未設定（ローカル保存）';
 }
 
 function parseCsv(text){
@@ -1317,6 +1369,119 @@ function renderLogs(){
   }).join('');
 }
 
+function logIdentity(log){
+  return [
+    log.id,
+    log.createdAt,
+    log.reservationNo,
+    log.customer
+  ].filter(Boolean).join('|');
+}
+
+function mergeLogs(localLogs, sharedLogs){
+  const seen = new Set();
+  return [...sharedLogs, ...localLogs]
+    .filter(log => {
+      const key = logIdentity(log);
+      if(seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a,b) => new Date(String(b.createdAt || '').replace(/\//g,'-')) - new Date(String(a.createdAt || '').replace(/\//g,'-')))
+    .slice(0,300);
+}
+
+function requestSharedLogs(){
+  const url = getSharedLogUrl();
+  if(!url) return Promise.reject(new Error('共有ログURLが未設定です'));
+  return new Promise((resolve, reject) => {
+    const callbackName = `sharedLogCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    const separator = url.includes('?') ? '&' : '?';
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('共有ログの読み込みがタイムアウトしました'));
+    }, 15000);
+    function cleanup(){
+      clearTimeout(timer);
+      delete window[callbackName];
+      script.remove();
+    }
+    window[callbackName] = payload => {
+      cleanup();
+      if(payload && payload.ok){
+        resolve(payload.logs || []);
+      }else{
+        reject(new Error((payload && payload.error) || '共有ログの読み込みに失敗しました'));
+      }
+    };
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('共有ログURLに接続できませんでした'));
+    };
+    script.src = `${url}${separator}action=list&callback=${encodeURIComponent(callbackName)}&t=${Date.now()}`;
+    document.body.appendChild(script);
+  });
+}
+
+async function syncSharedLogs(){
+  if(!sharedLogEnabled()){
+    toast('共有ログURLを先に設定してください');
+    return;
+  }
+  updateSharedLogStatus('共有ログ: 読み込み中...');
+  try{
+    const sharedLogs = await requestSharedLogs();
+    const merged = mergeLogs(getLogs(), sharedLogs);
+    setLogs(merged);
+    renderLogs();
+    updateSharedLogStatus(`共有ログ: 読み込み完了（${sharedLogs.length}件）`);
+    toast('共有ログを読み込みました');
+  }catch(error){
+    updateSharedLogStatus('共有ログ: 読み込み失敗');
+    toast(error.message || '共有ログを読み込めませんでした');
+  }
+}
+
+function appendSharedLog(log){
+  const url = getSharedLogUrl();
+  if(!url) return;
+  return fetch(url, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action:'append', log })
+  }).then(() => {
+    updateSharedLogStatus('共有ログ: 送信しました（反映確認は「共有ログを読み込み」）');
+  }).catch(() => {
+    updateSharedLogStatus('共有ログ: 送信に失敗しました');
+  });
+}
+
+async function uploadLocalLogsToShared(){
+  if(!sharedLogEnabled()){
+    toast('共有ログURLを先に設定してください');
+    return;
+  }
+  const logs = getLogs();
+  if(!logs.length){
+    toast('送信するローカルログがありません');
+    return;
+  }
+  updateSharedLogStatus(`共有ログ: ローカルログ送信中（${logs.length}件）`);
+  for(let index = 0; index < logs.length; index += 1){
+    const log = logs[index];
+    if(!log.id){
+      log.id = `${log.createdAt || Date.now()}-${log.reservationNo || ''}-${log.customer || ''}`.replace(/\s+/g,'_');
+    }
+    await appendSharedLog(log);
+    await sleep(120);
+  }
+  setLogs(logs);
+  updateSharedLogStatus('共有ログ: ローカルログ送信完了。読み込みで反映確認できます');
+  toast('ローカルログを共有へ送信しました');
+}
+
 function saveLog(){
   const data = state.parsed;
   if(!Object.keys(data).length){
@@ -1327,7 +1492,8 @@ function saveLog(){
   const status = checks.every(Boolean) && state.warnings.every(w => w.level === 'green') ? '確認済み' : '要確認';
   const logs = getLogs();
   const now = new Date();
-  logs.unshift({
+  const log = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     createdAt: now.toLocaleString('ja-JP'),
     workDate: now.toLocaleDateString('ja-JP'),
     reservationNo: data.reservationNo,
@@ -1336,10 +1502,16 @@ function saveLog(){
     appAssignedVehicle: data.appAssignedVehicle,
     adminTargetVehicle: data.adminTargetVehicle,
     status
-  });
+  };
+  logs.unshift(log);
   setLogs(logs.slice(0,100));
   renderLogs();
-  toast('作業ログに保存しました');
+  if(sharedLogEnabled()){
+    appendSharedLog(log);
+    toast('作業ログに保存し、共有ログへ送信しました');
+  }else{
+    toast('作業ログに保存しました');
+  }
 }
 
 function exportLogs(){
@@ -1425,6 +1597,24 @@ document.getElementById('sampleBtn').addEventListener('click', () => {
 });
 document.getElementById('saveLogBtn').addEventListener('click', saveLog);
 document.getElementById('exportLogBtn').addEventListener('click', exportLogs);
+document.getElementById('saveSharedLogUrlBtn').addEventListener('click', () => {
+  const url = els.sharedLogUrl.value.trim();
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(url)){
+    toast('Google Apps Script の /exec URLを入力してください');
+    return;
+  }
+  setSharedLogUrl(url);
+  updateSharedLogStatus();
+  toast('共有ログを有効化しました');
+  syncSharedLogs();
+});
+document.getElementById('syncSharedLogsBtn').addEventListener('click', syncSharedLogs);
+document.getElementById('uploadLocalLogsBtn').addEventListener('click', uploadLocalLogsToShared);
+document.getElementById('disableSharedLogBtn').addEventListener('click', () => {
+  clearSharedLogUrl();
+  updateSharedLogStatus();
+  toast('共有ログを無効化しました。以降はローカル保存です');
+});
 document.getElementById('compareCsvBtn').addEventListener('click', compareCsv);
 document.getElementById('exportMissingBtn').addEventListener('click', exportMissingRows);
 document.getElementById('csvSearchBtn').addEventListener('click', searchCsvAndLogs);
@@ -1513,6 +1703,7 @@ renderResult();
 renderCsvCompare();
 renderMappings();
 renderLogs();
+updateSharedLogStatus();
 </script>
 </body>
 </html>
