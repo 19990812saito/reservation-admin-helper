@@ -1492,7 +1492,7 @@ function mergeLogs(localLogs, sharedLogs){
       return true;
     })
     .sort((a,b) => dateValue(b.createdAt) - dateValue(a.createdAt))
-    .slice(0,300);
+    .slice(0,1000);
 }
 
 function requestSharedLogs(){
@@ -1607,7 +1607,7 @@ function saveLog(){
   };
   log.id = getStableLogId(log);
   logs.unshift(log);
-  setLogs(logs.slice(0,100));
+  setLogs(logs.slice(0,1000));
   renderLogs();
   if(sharedLogEnabled()){
     appendSharedLog(log);
