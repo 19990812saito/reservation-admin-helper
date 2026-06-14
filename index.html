@@ -434,6 +434,13 @@ th{
 .shared-log-title{font-weight:800;margin-bottom:4px}
 .shared-log-text{color:var(--muted);font-size:12px;margin-bottom:10px}
 .shared-log-status{color:var(--muted);font-size:12px;font-weight:800}
+.operator-box{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:12px;
+  background:#fff;
+  margin-bottom:12px;
+}
 .toast{
   position:fixed;
   left:50%;
@@ -669,12 +676,20 @@ th{
                 <span class="shared-log-status" id="sharedLogStatus">共有ログ: 未設定（ローカル保存）</span>
               </div>
             </div>
+            <div class="operator-box">
+              <div class="shared-log-title">作業担当者</div>
+              <div class="shared-log-text">登録作業ログに残す担当者名です。このブラウザに保存されます。</div>
+              <div class="row">
+                <input id="operatorName" placeholder="例: 斉藤 / 田原 / 竹山">
+                <button class="btn btn-ghost" id="saveOperatorBtn" type="button">担当者を保存</button>
+              </div>
+            </div>
             <div class="toolbar" style="margin-bottom:12px">
               <button class="btn btn-ghost" id="exportLogBtn" type="button">CSV出力</button>
               <button class="btn btn-ghost" id="clearLogBtn" type="button">ログ削除</button>
             </div>
             <table class="log-table">
-              <thead><tr><th>日時</th><th>予約番号</th><th>顧客</th><th>登録車種</th><th>app割当</th><th>admin対象</th><th>状態</th></tr></thead>
+              <thead><tr><th>日時</th><th>担当</th><th>予約番号</th><th>顧客</th><th>登録車種</th><th>app割当</th><th>admin対象</th><th>状態</th></tr></thead>
               <tbody id="logBody"></tbody>
             </table>
           </div>
@@ -729,6 +744,7 @@ const els = {
   csvSearchResult: document.getElementById('csvSearchResult'),
   sharedLogUrl: document.getElementById('sharedLogUrl'),
   sharedLogStatus: document.getElementById('sharedLogStatus'),
+  operatorName: document.getElementById('operatorName'),
   toast: document.getElementById('toast')
 };
 
@@ -750,6 +766,18 @@ function getLogs(){
 
 function setLogs(rows){
   localStorage.setItem('reservation_helper_logs', JSON.stringify(rows));
+}
+
+function getOperatorName(){
+  return localStorage.getItem('reservation_helper_operator_name') || '';
+}
+
+function setOperatorName(name){
+  localStorage.setItem('reservation_helper_operator_name', String(name || '').trim());
+}
+
+function updateOperatorInput(){
+  if(els.operatorName) els.operatorName.value = getOperatorName();
 }
 
 function getSharedLogUrl(){
@@ -1365,17 +1393,18 @@ function renderMappings(){
 function renderLogs(){
   const logs = getLogs();
   if(logs.length === 0){
-    els.logBody.innerHTML = '<tr><td colspan="7"><span class="chip">ログはまだありません</span></td></tr>';
+    els.logBody.innerHTML = '<tr><td colspan="8"><span class="chip">ログはまだありません</span></td></tr>';
     return;
   }
   let currentDate = '';
   els.logBody.innerHTML = logs.map(log => {
     const workDate = log.workDate || String(log.createdAt || '').split(' ')[0] || '日付未取得';
-    const divider = workDate !== currentDate ? `<tr class="date-divider"><td colspan="7"><span>${escapeHtml(workDate)} の作業</span></td></tr>` : '';
+    const divider = workDate !== currentDate ? `<tr class="date-divider"><td colspan="8"><span>${escapeHtml(workDate)} の作業</span></td></tr>` : '';
     currentDate = workDate;
     return `${divider}
       <tr>
         <td>${escapeHtml(log.createdAt)}</td>
+        <td>${escapeHtml(log.operator || '未設定')}</td>
         <td>${escapeHtml(log.reservationNo || '未取得')}</td>
         <td>${escapeHtml(log.customer || '未取得')}</td>
         <td>${escapeHtml(log.adminVehicle || '未確定')}</td>
@@ -1513,6 +1542,7 @@ function saveLog(){
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     createdAt: now.toLocaleString('ja-JP'),
     workDate: now.toLocaleDateString('ja-JP'),
+    operator: getOperatorName(),
     reservationNo: data.reservationNo,
     customer: data.customer,
     adminVehicle: data.adminVehicle,
@@ -1533,8 +1563,8 @@ function saveLog(){
 
 function exportLogs(){
   const logs = getLogs();
-  const header = ['日時','予約番号','顧客','登録車種','app割当車両','admin登録対象車両','状態'];
-  const rows = logs.map(log => [log.createdAt,log.reservationNo,log.customer,log.adminVehicle,log.appAssignedVehicle,log.adminTargetVehicle,log.status]);
+  const header = ['日時','担当','予約番号','顧客','登録車種','app割当車両','admin登録対象車両','状態'];
+  const rows = logs.map(log => [log.createdAt,log.operator,log.reservationNo,log.customer,log.adminVehicle,log.appAssignedVehicle,log.adminTargetVehicle,log.status]);
   const csv = [header,...rows].map(row => row.map(cell => `"${String(cell || '').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -1614,6 +1644,11 @@ document.getElementById('sampleBtn').addEventListener('click', () => {
 });
 document.getElementById('saveLogBtn').addEventListener('click', saveLog);
 document.getElementById('exportLogBtn').addEventListener('click', exportLogs);
+document.getElementById('saveOperatorBtn').addEventListener('click', () => {
+  setOperatorName(els.operatorName.value);
+  updateOperatorInput();
+  toast(getOperatorName() ? '担当者を保存しました' : '担当者を空欄にしました');
+});
 document.getElementById('saveSharedLogUrlBtn').addEventListener('click', () => {
   const url = normalizeSharedLogUrl(els.sharedLogUrl.value);
   if(!isValidSharedLogUrl(url)){
@@ -1720,6 +1755,7 @@ renderResult();
 renderCsvCompare();
 renderMappings();
 renderLogs();
+updateOperatorInput();
 updateSharedLogStatus();
 </script>
 </body>
