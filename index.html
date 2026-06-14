@@ -820,6 +820,21 @@ function getLogWorkDate(log){
   return formatDateOnly(log.workDate || log.createdAt) || '日付未取得';
 }
 
+function dateValue(value){
+  const date = parseDateLike(value);
+  return date ? date.getTime() : 0;
+}
+
+function normalizeLogKeyPart(value){
+  return String(value || '').replace(/\s+/g, '').toUpperCase();
+}
+
+function getStableLogId(log){
+  const reservationNo = normalizeLogKeyPart(log.reservationNo);
+  if(reservationNo) return `reservation-${reservationNo}`;
+  return log.id || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function getSharedLogUrl(){
   return localStorage.getItem('reservation_helper_shared_log_url') || '';
 }
@@ -1456,12 +1471,15 @@ function renderLogs(){
 }
 
 function logIdentity(log){
+  const reservationNo = normalizeLogKeyPart(log.reservationNo);
+  if(reservationNo) return `reservation:${reservationNo}`;
+  if(log.id) return `id:${log.id}`;
   return [
-    log.id,
     log.createdAt,
-    log.reservationNo,
-    log.customer
-  ].filter(Boolean).join('|');
+    log.customer,
+    log.adminVehicle,
+    log.appAssignedVehicle
+  ].map(normalizeLogKeyPart).filter(Boolean).join('|');
 }
 
 function mergeLogs(localLogs, sharedLogs){
@@ -1473,7 +1491,7 @@ function mergeLogs(localLogs, sharedLogs){
       seen.add(key);
       return true;
     })
-    .sort((a,b) => new Date(String(b.createdAt || '').replace(/\//g,'-')) - new Date(String(a.createdAt || '').replace(/\//g,'-')))
+    .sort((a,b) => dateValue(b.createdAt) - dateValue(a.createdAt))
     .slice(0,300);
 }
 
@@ -1557,9 +1575,7 @@ async function uploadLocalLogsToShared(){
   updateSharedLogStatus(`共有ログ: ローカルログ送信中（${logs.length}件）`);
   for(let index = 0; index < logs.length; index += 1){
     const log = logs[index];
-    if(!log.id){
-      log.id = `${log.createdAt || Date.now()}-${log.reservationNo || ''}-${log.customer || ''}`.replace(/\s+/g,'_');
-    }
+    log.id = getStableLogId(log);
     await appendSharedLog(log);
     await sleep(120);
   }
@@ -1579,7 +1595,6 @@ function saveLog(){
   const logs = getLogs();
   const now = new Date();
   const log = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     createdAt: now.toLocaleString('ja-JP'),
     workDate: now.toLocaleDateString('ja-JP'),
     operator: getOperatorName(),
@@ -1590,6 +1605,7 @@ function saveLog(){
     adminTargetVehicle: data.adminTargetVehicle,
     status
   };
+  log.id = getStableLogId(log);
   logs.unshift(log);
   setLogs(logs.slice(0,100));
   renderLogs();
