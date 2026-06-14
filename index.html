@@ -780,6 +780,46 @@ function updateOperatorInput(){
   if(els.operatorName) els.operatorName.value = getOperatorName();
 }
 
+function parseDateLike(value){
+  const raw = String(value || '').trim();
+  if(!raw) return null;
+  const normalized = raw.replace(/\(.+?\)/g, '').trim();
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function pad2(value){
+  return String(value).padStart(2, '0');
+}
+
+function formatDateOnly(value){
+  const raw = String(value || '').trim();
+  if(!raw) return '';
+  const match = raw.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+  if(match) return `${Number(match[1])}/${Number(match[2])}/${Number(match[3])}`;
+  const date = parseDateLike(raw);
+  if(!date) return raw;
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function formatDateTime(value){
+  const raw = String(value || '').trim();
+  if(!raw) return '';
+  const match = raw.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(match){
+    const date = `${Number(match[1])}/${Number(match[2])}/${Number(match[3])}`;
+    if(!match[4]) return date;
+    return `${date} ${Number(match[4])}:${match[5]}${match[6] ? `:${match[6]}` : ''}`;
+  }
+  const date = parseDateLike(raw);
+  if(!date) return raw;
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+}
+
+function getLogWorkDate(log){
+  return formatDateOnly(log.workDate || log.createdAt) || '日付未取得';
+}
+
 function getSharedLogUrl(){
   return localStorage.getItem('reservation_helper_shared_log_url') || '';
 }
@@ -1398,12 +1438,12 @@ function renderLogs(){
   }
   let currentDate = '';
   els.logBody.innerHTML = logs.map(log => {
-    const workDate = log.workDate || String(log.createdAt || '').split(' ')[0] || '日付未取得';
+    const workDate = getLogWorkDate(log);
     const divider = workDate !== currentDate ? `<tr class="date-divider"><td colspan="8"><span>${escapeHtml(workDate)} の作業</span></td></tr>` : '';
     currentDate = workDate;
     return `${divider}
       <tr>
-        <td>${escapeHtml(log.createdAt)}</td>
+        <td>${escapeHtml(formatDateTime(log.createdAt) || '未取得')}</td>
         <td>${escapeHtml(log.operator || '未設定')}</td>
         <td>${escapeHtml(log.reservationNo || '未取得')}</td>
         <td>${escapeHtml(log.customer || '未取得')}</td>
