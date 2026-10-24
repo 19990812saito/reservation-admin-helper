@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -596,7 +597,11 @@ th{
             <div style="margin-top:14px" class="panel">
               <div class="panel-head">
                 <div class="panel-title">登録前チェック</div>
-                <button class="btn btn-green" id="saveLogBtn" type="button">登録作業ログに保存</button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                  <span id="reservationPosition" role="status" style="font-size:13px;color:var(--muted)"></span>
+                  <button class="btn btn-green" id="saveLogBtn" type="button">登録作業ログに保存して次へ</button>
+                  <button class="btn btn-ghost" id="skipNextBtn" type="button">保存せず次へ</button>
+                </div>
               </div>
               <div class="panel-body">
                 <div class="checklist">
@@ -717,6 +722,7 @@ const state = {
   appRows: [],
   adminRows: [],
   missingRows: [],
+  currentMissingIndex: -1,
   copyQueue: [],
   copyIndex: 0
 };
@@ -936,7 +942,9 @@ function readCsvFile(file, target){
       state.adminRows = rows;
       els.adminCsvMeta.textContent = `${file.name} / ${rows.length}件`;
     }
+    state.currentMissingIndex = -1;
     renderCsvCompare();
+    renderResult();
     toast('CSVを読み込みました');
   };
   reader.readAsText(file, 'utf-8');
@@ -987,6 +995,7 @@ function compareCsv(){
     toast('app側CSVとadmin側CSVを両方選択してください');
     return;
   }
+  state.currentMissingIndex = -1;
   const adminIds = new Set(state.adminRows.map(reservationId).filter(Boolean));
   const appActive = state.appRows.filter(isActiveAppRow);
   state.missingRows = appActive.filter(row => {
@@ -994,6 +1003,7 @@ function compareCsv(){
     return id && !adminIds.has(id);
   });
   renderCsvCompare();
+  renderResult();
   toast(`${state.missingRows.length}件のappのみ予約を検出しました`);
 }
 
@@ -1156,6 +1166,7 @@ function parseReservation(){
     toast('予約情報を貼り付けてください');
     return;
   }
+  state.currentMissingIndex = -1;
   const vehicle = findVehicle(text);
   const customer = pickLine(text, ['お客様名','氏名','名前','利用者']) || '';
   const nameParts = splitName(customer);
@@ -1227,6 +1238,8 @@ function validate(data, mapped){
 function useMissingRow(index){
   const row = state.missingRows[index];
   if(!row) return;
+  clearReservation();
+  state.currentMissingIndex = index;
   const customer = row['予約者'] || '';
   const nameParts = splitName(customer);
   const assigned = [row['配車車両'], row['ナンバー']].filter(Boolean).join(' / ');
@@ -1385,6 +1398,10 @@ function renderCopyRunner(){
 function renderResult(){
   const data = state.parsed;
   const hasParsed = Object.keys(data).length > 0;
+  document.getElementById('saveLogBtn').disabled = !hasParsed;
+  document.getElementById('skipNextBtn').disabled = !hasParsed;
+  document.getElementById('reservationPosition').textContent = state.currentMissingIndex >= 0
+    ? `${state.currentMissingIndex + 1} / ${state.missingRows.length}件` : '';
   if(!hasParsed){
     document.getElementById('scoreRequired').textContent = '0/5';
     document.getElementById('scoreWarning').textContent = '-';
@@ -1619,6 +1636,35 @@ function saveLog(){
   }else{
     toast('作業ログに保存しました');
   }
+  advanceReservation('作業ログに保存しました');
+}
+
+function clearReservation(){
+  ['rawText','appAssignedVehicle','adminTargetVehicle','lastName','firstName','prefecture','birthDate'].forEach(id => {
+    els[id].value = '';
+  });
+  ['chkSlack','chkApp','chkVehicle','chkDate','chkPrice','chkAdmin','chkStamp'].forEach(id => {
+    document.getElementById(id).checked = false;
+  });
+  state.parsed = {};
+  state.warnings = [];
+  state.copyQueue = [];
+  state.copyIndex = 0;
+  state.currentMissingIndex = -1;
+  renderResult();
+}
+
+function advanceReservation(message){
+  const index = state.currentMissingIndex;
+  if(index >= 0 && index + 1 < state.missingRows.length){
+    useMissingRow(index + 1);
+    toast(`${message}。次の予約を表示しました`);
+    document.getElementById('view-result').scrollIntoView({block:'start'});
+  }else{
+    clearReservation();
+    toast(index >= 0 ? `${message}。最後の予約まで確認しました` : `${message}。次の予約を貼り付けてください`);
+    els.rawText.focus();
+  }
 }
 
 function exportLogs(){
@@ -1675,18 +1721,7 @@ function escapeAttr(value){
 }
 
 document.getElementById('parseBtn').addEventListener('click', parseReservation);
-document.getElementById('clearBtn').addEventListener('click', () => {
-  els.rawText.value = '';
-  els.appAssignedVehicle.value = '';
-  els.adminTargetVehicle.value = '';
-  els.lastName.value = '';
-  els.firstName.value = '';
-  els.prefecture.value = '';
-  els.birthDate.value = '';
-  state.parsed = {};
-  state.warnings = [];
-  renderResult();
-});
+document.getElementById('clearBtn').addEventListener('click', clearReservation);
 document.getElementById('sampleBtn').addEventListener('click', () => {
   els.appAssignedVehicle.value = 'N-BOX 白 12-34';
   els.adminTargetVehicle.value = 'N-BOX 白 12-34';
@@ -1703,6 +1738,9 @@ document.getElementById('sampleBtn').addEventListener('click', () => {
   parseReservation();
 });
 document.getElementById('saveLogBtn').addEventListener('click', saveLog);
+document.getElementById('skipNextBtn').addEventListener('click', () => {
+  if(Object.keys(state.parsed).length) advanceReservation('保存せずにスキップしました');
+});
 document.getElementById('exportLogBtn').addEventListener('click', exportLogs);
 document.getElementById('saveOperatorBtn').addEventListener('click', () => {
   setOperatorName(els.operatorName.value);
